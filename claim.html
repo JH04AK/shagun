@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Claim Your Shagun Stock Gift 🎁</title>
+  <style>
+    * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    body { background-color: #f4f7f6; margin: 0; padding: 20px; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+    .card { background: white; max-width: 480px; width: 100%; padding: 30px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); text-align: center; }
+    .badge { background: #dbeafe; color: #1e40af; font-weight: bold; padding: 6px 12px; border-radius: 20px; font-size: 14px; display: inline-block; margin-bottom: 15px; }
+    h2 { color: #1e3a8a; margin: 10px 0; }
+    p { color: #4b5563; font-size: 15px; margin-bottom: 20px; }
+    .gift-details { background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 8px; padding: 20px; margin-bottom: 25px; text-align: left; }
+    .gift-details div { font-size: 15px; color: #334155; margin-bottom: 8px; }
+    .gift-details strong { color: #0f172a; }
+    .btn { background: #16a34a; color: white; border: none; padding: 14px; width: 100%; border-radius: 6px; font-size: 16px; font-weight: bold; cursor: pointer; text-decoration: none; display: inline-block; }
+    .btn:hover { background: #15803d; }
+    #loader { color: #6b7280; font-weight: 500; }
+  </style>
+</head>
+<body>
+
+<div class="card">
+  <div id="loader">Loading your stock gift lifafa...</div>
+
+  <div id="claimContainer" style="display: none;">
+    <span class="badge">🎁 Digital Lifafa</span>
+    <h2 id="recipientGreeting">You received a Stock Gift!</h2>
+    <p id="senderNote"></p>
+
+    <div class="gift-details">
+      <div><strong>Stock Asset:</strong> <span id="stockSymbol"></span></div>
+      <div><strong>Amount:</strong> ₹<span id="giftAmount"></span></div>
+      <div><strong>Occasion:</strong> <span id="occasionText"></span></div>
+      <div><strong>Message:</strong> <i id="messageText"></i></div>
+    </div>
+
+    <button class="btn" onclick="claimStock()">Claim to Demat Account 🚀</button>
+  </div>
+</div>
+
+<script>
+  const RENDER_API_URL = 'https://shagun-api.onrender.com';
+
+  async function loadGiftDetails() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const token = urlParams.get('token');
+
+    const loader = document.getElementById('loader');
+    const container = document.getElementById('claimContainer');
+
+    if (!token) {
+      loader.innerText = 'Invalid or missing gift token.';
+      loader.style.color = '#dc2626';
+      return;
+    }
+
+    try {
+      const res = await fetch(`${RENDER_API_URL}/api/v1/gifts/claim/${token}`);
+      const data = await res.json();
+
+      if (!data.success) throw new Error(data.error || 'Gift not found.');
+
+      const gift = data.gift;
+
+      document.getElementById('recipientGreeting').innerText = `Congratulations ${gift.recipient_name}!`;
+      document.getElementById('senderNote').innerText = `${gift.sender_name} has sent you a stock gift.`;
+      document.getElementById('stockSymbol').innerText = gift.stock_symbol;
+      document.getElementById('giftAmount').innerText = gift.gift_amount_inr;
+      document.getElementById('occasionText').innerText = gift.occasion;
+      document.getElementById('messageText').innerText = gift.message || 'Best wishes!';
+
+      loader.style.display = 'none';
+      container.style.display = 'block';
+
+    } catch (err) {
+      loader.innerText = 'Error: ' + err.message;
+      loader.style.color = '#dc2626';
+    }
+  }
+
+  function claimStock() {
+    alert('Stock transfer process initiated! Connect your broker account to complete redemption.');
+  }
+
+  loadGiftDetails();
+</script>
+
+</body>
+</html>
