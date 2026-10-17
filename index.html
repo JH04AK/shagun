@@ -83,7 +83,7 @@
     submitBtn.innerText = 'Creating Order...';
     submitBtn.disabled = true;
     statusDiv.style.color = '#374151';
-    statusDiv.innerText = 'Initiating gift order...';
+    statusDiv.innerText = 'Connecting to Shagun backend...';
 
     const giftDetails = {
       sender_name: document.getElementById('senderName').value,
@@ -97,19 +97,27 @@
     };
 
     try {
-      // 1. Create gift record in Supabase
+      // 1. Save draft order in Supabase via Render
       const giftRes = await fetch(`${RENDER_API_URL}/api/v1/gifts/create`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(giftDetails)
       });
-      const giftData = await giftRes.json();
+      
+      const rawText = await giftRes.text();
+      let giftData;
+      try {
+        giftData = JSON.parse(rawText);
+      } catch (err) {
+        throw new Error('Backend returned invalid HTML instead of JSON: ' + rawText.substring(0, 100));
+      }
+
       if (!giftData.success) throw new Error(giftData.error || 'Failed to create gift order');
 
       const createdGift = giftData.order;
 
-      // 2. Create Razorpay Order
-      statusDiv.innerText = 'Opening payment gateway...';
+      // 2. Create Razorpay Payment Order
+      statusDiv.innerText = 'Initiating payment modal...';
       const payOrderRes = await fetch(`${RENDER_API_URL}/api/v1/payments/create-order`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -121,7 +129,7 @@
       const payOrderData = await payOrderRes.json();
       if (!payOrderData.success) throw new Error('Razorpay setup failed: ' + payOrderData.error);
 
-      // 3. Launch Razorpay Checkout Modal
+      // 3. Open Razorpay Checkout Modal
       const options = {
         key: payOrderData.key_id,
         amount: payOrderData.amount,
@@ -135,7 +143,7 @@
         },
         theme: { color: '#2563eb' },
         handler: async function (response) {
-          statusDiv.innerText = 'Verifying payment...';
+          statusDiv.innerText = 'Verifying payment status...';
 
           const verifyRes = await fetch(`${RENDER_API_URL}/api/v1/payments/verify`, {
             method: 'POST',
