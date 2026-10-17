@@ -14,8 +14,11 @@
     .gift-details { background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 8px; padding: 20px; margin-bottom: 25px; text-align: left; }
     .gift-details div { font-size: 15px; color: #334155; margin-bottom: 8px; }
     .gift-details strong { color: #0f172a; }
-    .btn { background: #16a34a; color: white; border: none; padding: 14px; width: 100%; border-radius: 6px; font-size: 16px; font-weight: bold; cursor: pointer; text-decoration: none; display: inline-block; }
+    .btn { background: #16a34a; color: white; border: none; padding: 14px; width: 100%; border-radius: 6px; font-size: 16px; font-weight: bold; cursor: pointer; display: inline-block; }
     .btn:hover { background: #15803d; }
+    .form-group { text-align: left; margin-bottom: 15px; }
+    label { display: block; font-weight: 600; font-size: 14px; color: #374151; margin-bottom: 5px; }
+    input, select { width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; }
     #loader { color: #6b7280; font-weight: 500; }
   </style>
 </head>
@@ -24,6 +27,7 @@
 <div class="card">
   <div id="loader">Loading your stock gift lifafa...</div>
 
+  <!-- Step 1: Display Gift -->
   <div id="claimContainer" style="display: none;">
     <span class="badge">🎁 Digital Lifafa</span>
     <h2 id="recipientGreeting">You received a Stock Gift!</h2>
@@ -36,33 +40,75 @@
       <div><strong>Message:</strong> <i id="messageText"></i></div>
     </div>
 
-    <button class="btn" onclick="claimStock()">Claim to Demat Account 🚀</button>
+    <button class="btn" onclick="showClaimForm()">Claim to Demat Account 🚀</button>
+  </div>
+
+  <!-- Step 2: Demat Input Form -->
+  <div id="dematFormContainer" style="display: none;">
+    <h2>Claim Your Shares</h2>
+    <p>Provide your Depository Participant (DP) details to transfer stock units.</p>
+
+    <form id="dematForm">
+      <div class="form-group">
+        <label>Select Broker</label>
+        <select id="brokerName" required>
+          <option value="Zerodha">Zerodha (Kite)</option>
+          <option value="Groww">Groww</option>
+          <option value="AngelOne">Angel One</option>
+          <option value="Upstox">Upstox</option>
+          <option value="ICICI Direct">ICICI Direct</option>
+          <option value="Other">Other / CDSL / NSDL</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>16-Digit BO ID / Demat Account No.</label>
+        <input type="text" id="dematNumber" maxlength="16" placeholder="e.g. 1208160012345678" required>
+      </div>
+
+      <button type="submit" id="submitClaimBtn" class="btn">Submit Claim Request</button>
+    </form>
+    <div id="claimStatus" style="margin-top: 15px; font-weight: 600;"></div>
+  </div>
+
+  <!-- Step 3: Confirmation -->
+  <div id="successContainer" style="display: none;">
+    <span class="badge" style="background:#dcfce7; color:#15803d;">✅ Transfer Initiated</span>
+    <h2>Claim Request Received!</h2>
+    <p>Your gift is queued for off-market delivery. Stock transfer confirmation will be sent to your registered phone number once processed.</p>
   </div>
 </div>
 
 <script>
   const RENDER_API_URL = 'https://shagun-api.onrender.com';
+  let currentToken = '';
 
   async function loadGiftDetails() {
     const urlParams = new URLSearchParams(window.location.search);
-    const token = urlParams.get('token');
+    currentToken = urlParams.get('token');
 
     const loader = document.getElementById('loader');
     const container = document.getElementById('claimContainer');
 
-    if (!token) {
+    if (!currentToken) {
       loader.innerText = 'Invalid or missing gift token.';
       loader.style.color = '#dc2626';
       return;
     }
 
     try {
-      const res = await fetch(`${RENDER_API_URL}/api/v1/gifts/claim/${token}`);
+      const res = await fetch(`${RENDER_API_URL}/api/v1/gifts/claim/${currentToken}`);
       const data = await res.json();
 
       if (!data.success) throw new Error(data.error || 'Gift not found.');
 
       const gift = data.gift;
+
+      if (gift.status === 'CLAIMED') {
+        loader.style.display = 'none';
+        document.getElementById('successContainer').style.display = 'block';
+        return;
+      }
 
       document.getElementById('recipientGreeting').innerText = `Congratulations ${gift.recipient_name}!`;
       document.getElementById('senderNote').innerText = `${gift.sender_name} has sent you a stock gift.`;
@@ -80,9 +126,45 @@
     }
   }
 
-  function claimStock() {
-    alert('Stock transfer process initiated! Connect your broker account to complete redemption.');
+  function showClaimForm() {
+    document.getElementById('claimContainer').style.display = 'none';
+    document.getElementById('dematFormContainer').style.display = 'block';
   }
+
+  document.getElementById('dematForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const statusDiv = document.getElementById('claimStatus');
+    const btn = document.getElementById('submitClaimBtn');
+
+    btn.disabled = true;
+    btn.innerText = 'Processing...';
+
+    const payload = {
+      token: currentToken,
+      broker: document.getElementById('brokerName').value,
+      demat_number: document.getElementById('dematNumber').value
+    };
+
+    try {
+      const res = await fetch(`${RENDER_API_URL}/api/v1/gifts/process-claim`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error || 'Claim processing failed.');
+
+      document.getElementById('dematFormContainer').style.display = 'none';
+      document.getElementById('successContainer').style.display = 'block';
+
+    } catch (err) {
+      statusDiv.style.color = '#dc2626';
+      statusDiv.innerText = err.message;
+      btn.disabled = false;
+      btn.innerText = 'Submit Claim Request';
+    }
+  });
 
   loadGiftDetails();
 </script>
