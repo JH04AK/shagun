@@ -1,7 +1,8 @@
-// Aapka Live Render API URL
+<script>
+// Live Render API URL
 const RENDER_API_URL = 'https://shagun-api.onrender.com';
 
-// Form submit hone par ye function chalega
+// Form submit function
 async function createStockGift(giftDetails) {
   try {
     const response = await fetch(`${RENDER_API_URL}/api/v1/gifts/create`, {
@@ -10,14 +11,14 @@ async function createStockGift(giftDetails) {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        sender_phone: giftDetails.senderPhone,     // Sender ka Phone
-        sender_name: giftDetails.senderName,       // Sender ka Name
-        recipient_phone: giftDetails.recipientPhone, // Recipient ka Phone
-        recipient_name: giftDetails.recipientName,   // Recipient ka Name
-        stock_symbol: giftDetails.stockSymbol,     // e.g. 'TATAMOTORS'
-        gift_amount_inr: giftDetails.amount,       // e.g. 2100
-        occasion: giftDetails.occasion,           // e.g. 'WEDDING'
-        message: giftDetails.message               // Personal Message
+        sender_phone: giftDetails.senderPhone,
+        sender_name: giftDetails.senderName,
+        recipient_phone: giftDetails.recipientPhone,
+        recipient_name: giftDetails.recipientName,
+        stock_symbol: giftDetails.stockSymbol,
+        gift_amount_inr: giftDetails.amount,
+        occasion: giftDetails.occasion,
+        message: giftDetails.message
       })
     });
 
@@ -33,3 +34,4 @@ async function createStockGift(giftDetails) {
     console.error('Network Error:', err);
   }
 }
+</script>
