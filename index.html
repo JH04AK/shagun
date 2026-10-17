@@ -1,234 +1,35 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Shagun - Gift Shares via UPI</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <style>
-    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
-    body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #0f172a; color: #f8fafc; }
-    .bg-gradient-shagun { background: linear-gradient(135deg, #7c3aed 0%, #c026d3 50%, #db2777 100%); }
-    .glass-card { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1); }
-  </style>
-</head>
-<body class="min-h-screen pb-12">
+// Aapka Live Render API URL
+const RENDER_API_URL = 'https://shagun-api.onrender.com';
 
-  <!-- Navigation Bar -->
-  <nav class="border-b border-slate-800 bg-slate-900/80 sticky top-0 z-50 backdrop-blur-md">
-    <div class="max-w-md mx-auto px-4 py-3 flex items-center justify-between">
-      <div class="flex items-center space-x-2">
-        <div class="w-9 h-9 rounded-xl bg-gradient-shagun flex items-center justify-center font-black text-white text-lg shadow-lg">🎁</div>
-        <div>
-          <h1 class="font-bold text-base leading-none text-white">Shagun</h1>
-          <p class="text-[10px] text-pink-400 font-medium">Equity Gifting via UPI</p>
-        </div>
-      </div>
-      <div class="bg-slate-800 p-1 rounded-xl flex border border-slate-700">
-        <button id="btn-sender-view" onclick="switchView('sender')" class="px-3 py-1 text-xs font-semibold rounded-lg transition-all bg-gradient-shagun text-white shadow-md">Sender Flow</button>
-        <button id="btn-recipient-view" onclick="switchView('recipient')" class="px-3 py-1 text-xs font-semibold rounded-lg text-slate-400 hover:text-white transition-all">Recipient Flow</button>
-      </div>
-    </div>
-  </nav>
+// Form submit hone par ye function chalega
+async function createStockGift(giftDetails) {
+  try {
+    const response = await fetch(`${RENDER_API_URL}/api/v1/gifts/create`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        sender_phone: giftDetails.senderPhone,     // Sender ka Phone
+        sender_name: giftDetails.senderName,       // Sender ka Name
+        recipient_phone: giftDetails.recipientPhone, // Recipient ka Phone
+        recipient_name: giftDetails.recipientName,   // Recipient ka Name
+        stock_symbol: giftDetails.stockSymbol,     // e.g. 'TATAMOTORS'
+        gift_amount_inr: giftDetails.amount,       // e.g. 2100
+        occasion: giftDetails.occasion,           // e.g. 'WEDDING'
+        message: giftDetails.message               // Personal Message
+      })
+    });
 
-  <main class="max-w-md mx-auto px-4 pt-4">
+    const data = await response.json();
 
-    <!-- VIEW 1: SENDER FLOW -->
-    <div id="view-sender" class="space-y-4">
-      <div class="glass-card rounded-2xl p-4">
-        <label class="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-2">1. Choose Occasion</label>
-        <div class="grid grid-cols-4 gap-2">
-          <button onclick="selectOccasion('wedding')" class="p-2 rounded-xl bg-slate-800 border border-pink-500/50 text-center flex flex-col items-center">
-            <span class="text-xl">💍</span><span class="text-[10px] font-semibold mt-1">Wedding</span>
-          </button>
-          <button onclick="selectOccasion('birthday')" class="p-2 rounded-xl bg-slate-800 border border-slate-700 text-center flex flex-col items-center">
-            <span class="text-xl">🎂</span><span class="text-[10px] font-semibold mt-1">Birthday</span>
-          </button>
-          <button onclick="selectOccasion('diwali')" class="p-2 rounded-xl bg-slate-800 border border-slate-700 text-center flex flex-col items-center">
-            <span class="text-xl">🪔</span><span class="text-[10px] font-semibold mt-1">Diwali</span>
-          </button>
-          <button onclick="selectOccasion('baby')" class="p-2 rounded-xl bg-slate-800 border border-slate-700 text-center flex flex-col items-center">
-            <span class="text-xl">👶</span><span class="text-[10px] font-semibold mt-1">Newborn</span>
-          </button>
-        </div>
-      </div>
-
-      <div class="glass-card rounded-2xl p-4">
-        <label class="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-2">2. Choose Stock or ETF</label>
-        <div class="space-y-2">
-          <div onclick="setAmount(2100)" class="border border-pink-500/60 bg-pink-500/10 p-3 rounded-xl flex items-center justify-between cursor-pointer">
-            <div class="flex items-center space-x-3">
-              <div class="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center font-bold text-xs">TM</div>
-              <div>
-                <h4 class="font-bold text-sm">Tata Motors Ltd</h4>
-                <p class="text-[11px] text-slate-400">EV & Auto Bluechip</p>
-              </div>
-            </div>
-            <div class="text-right">
-              <span class="font-bold text-sm block">₹985.50</span>
-              <span class="text-[10px] text-emerald-400 font-semibold">+2.4% Today</span>
-            </div>
-          </div>
-        </div>
-
-        <div class="mt-3 pt-3 border-t border-slate-800">
-          <label class="text-[11px] font-medium text-slate-400 block mb-2">Select Gift Value (Shagun)</label>
-          <div class="grid grid-cols-4 gap-2">
-            <button onclick="setAmount(501)" class="py-1.5 rounded-lg bg-slate-800 border border-slate-700 text-xs font-bold hover:border-pink-500">₹501</button>
-            <button onclick="setAmount(1001)" class="py-1.5 rounded-lg bg-slate-800 border border-slate-700 text-xs font-bold hover:border-pink-500">₹1,001</button>
-            <button onclick="setAmount(2100)" class="py-1.5 rounded-lg bg-pink-500/20 border border-pink-500 text-xs font-bold text-pink-300">₹2,100</button>
-            <button onclick="setAmount(5001)" class="py-1.5 rounded-lg bg-slate-800 border border-slate-700 text-xs font-bold hover:border-pink-500">₹5,001</button>
-          </div>
-        </div>
-      </div>
-
-      <div class="glass-card rounded-2xl p-4 space-y-3">
-        <label class="text-xs font-bold text-slate-400 uppercase tracking-wider block">3. Recipient Info</label>
-        <input type="text" id="recipient-name" value="Ananya Sharma" placeholder="Recipient's Name" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none">
-        <input type="tel" id="recipient-phone" value="+91 98765 43210" placeholder="Recipient's Phone Number" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none">
-        <textarea id="gift-message" rows="2" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none">Wishing you a lifetime of happiness & compounded growth! 💍✨</textarea>
-      </div>
-
-      <button onclick="processUPIPayment()" class="w-full py-3.5 rounded-2xl bg-gradient-shagun font-extrabold text-white shadow-lg flex items-center justify-center space-x-2 text-base">
-        <span>Pay <span id="pay-amount-label">₹2,100</span> via UPI</span>
-        <i class="fa-solid fa-arrow-right"></i>
-      </button>
-
-      <div id="upi-modal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-end justify-center">
-        <div class="bg-slate-900 border-t border-slate-800 rounded-t-3xl w-full max-w-md p-6 space-y-4">
-          <div class="flex justify-between items-center">
-            <h3 class="font-bold text-lg">Select UPI App</h3>
-            <button onclick="closeModal()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
-          </div>
-          <div class="grid grid-cols-2 gap-3">
-            <button onclick="simulateSuccess()" class="p-3 rounded-xl bg-slate-800 border border-slate-700 flex items-center space-x-3">
-              <span class="w-8 h-8 rounded-full bg-purple-600 flex items-center justify-center font-black text-xs">Pe</span>
-              <span class="font-bold text-sm">PhonePe</span>
-            </button>
-            <button onclick="simulateSuccess()" class="p-3 rounded-xl bg-slate-800 border border-slate-700 flex items-center space-x-3">
-              <span class="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center font-black text-xs">G</span>
-              <span class="font-bold text-sm">Google Pay</span>
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <div id="generated-card-modal" class="hidden fixed inset-0 bg-black/90 backdrop-blur-md z-50 flex items-center justify-center p-4">
-        <div class="bg-slate-900 border border-pink-500/40 rounded-3xl w-full max-w-md p-6 space-y-4 text-center">
-          <div class="w-16 h-16 rounded-full bg-emerald-500/20 border border-emerald-500 text-emerald-400 flex items-center justify-center mx-auto text-2xl">
-            <i class="fa-solid fa-check"></i>
-          </div>
-          <h3 class="font-extrabold text-xl">Gift Created Successfully!</h3>
-          <p class="text-xs text-slate-400">Share this Digital Lifafa with Ananya Sharma via WhatsApp.</p>
-          
-          <div class="p-4 rounded-2xl bg-gradient-shagun text-white text-left space-y-2 shadow-xl">
-            <div class="flex justify-between items-center">
-              <span class="text-xs uppercase font-bold tracking-wider opacity-80">Wedding Shagun</span>
-              <span class="text-xs font-extrabold bg-white/20 px-2 py-0.5 rounded-full">2 Shares</span>
-            </div>
-            <h4 class="font-black text-lg">Tata Motors Ltd</h4>
-            <p class="text-xs italic bg-black/20 p-2 rounded-lg">"Wishing you a lifetime of happiness & compounded growth! 💍✨"</p>
-            <div class="pt-2 flex justify-between items-end border-t border-white/20">
-              <div>
-                <p class="text-[10px] opacity-80">Gift Value</p>
-                <p class="font-black text-base">₹2,100.00</p>
-              </div>
-              <p class="text-[10px] font-semibold bg-white text-pink-600 px-2 py-1 rounded-md">Claim Code: SHAGUN2026</p>
-            </div>
-          </div>
-
-          <button onclick="switchView('recipient'); closeModal();" class="w-full py-3 bg-emerald-500 rounded-xl font-extrabold text-slate-950 flex items-center justify-center space-x-2">
-            <i class="fa-brands fa-whatsapp text-lg"></i>
-            <span>Simulate Recipient Opening WhatsApp Link</span>
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- VIEW 2: RECIPIENT FLOW -->
-    <div id="view-recipient" class="hidden space-y-4">
-      <div id="recipient-claim-card" class="glass-card rounded-2xl p-5 text-center space-y-3 border-pink-500/50">
-        <span class="text-3xl">🎁</span>
-        <h3 class="font-extrabold text-lg text-white">Rahul sent you a Stock Gift!</h3>
-        <p class="text-xs text-slate-300">You received <span class="font-bold text-pink-400">2 Shares of Tata Motors</span> (Value: ₹2,100)</p>
-        <button onclick="claimStockGift()" class="w-full py-3 rounded-xl bg-gradient-shagun font-extrabold text-white shadow-lg">
-          Claim Stock to Gift Wallet (Instant)
-        </button>
-      </div>
-
-      <div id="recipient-dashboard" class="hidden space-y-4">
-        <div class="glass-card rounded-2xl p-4 bg-gradient-to-br from-slate-900 to-slate-800">
-          <p class="text-xs text-slate-400 font-semibold uppercase tracking-wider">Your Gift Wallet Balance</p>
-          <div class="flex items-baseline space-x-2 mt-1">
-            <h2 class="text-3xl font-black text-white">₹2,152.40</h2>
-            <span class="text-xs font-bold text-emerald-400">+₹52.40 (2.5%)</span>
-          </div>
-          <p class="text-[10px] text-slate-500 mt-1">1 Share Tata Motors • Escrow Custody</p>
-        </div>
-
-        <div class="glass-card rounded-2xl p-4 border-amber-500/40 bg-amber-500/5 space-y-2">
-          <div class="flex items-center space-x-2 text-amber-400">
-            <i class="fa-solid fa-shield-halved text-sm"></i>
-            <h4 class="font-bold text-xs uppercase tracking-wider">Complete Demat Transfer (Optional)</h4>
-          </div>
-          <p class="text-xs text-slate-300">Transfer these shares permanently to your Zerodha, Groww, or AngelOne account anytime.</p>
-          <button onclick="alert('Redirecting to DigiLocker e-KYC flow...')" class="w-full py-2.5 bg-amber-500 text-slate-950 font-bold rounded-xl text-xs">
-            Complete 2-Min DigiLocker KYC
-          </button>
-        </div>
-      </div>
-    </div>
-  </main>
-
-  <script>
-    let selectedAmount = 2100;
-    
-    function switchView(view) {
-      const senderDiv = document.getElementById('view-sender');
-      const recipientDiv = document.getElementById('view-recipient');
-      const btnSender = document.getElementById('btn-sender-view');
-      const btnRecipient = document.getElementById('btn-recipient-view');
-
-      if (view === 'sender') {
-        senderDiv.classList.remove('hidden');
-        recipientDiv.classList.add('hidden');
-        btnSender.className = 'px-3 py-1 text-xs font-semibold rounded-lg transition-all bg-gradient-shagun text-white shadow-md';
-        btnRecipient.className = 'px-3 py-1 text-xs font-semibold rounded-lg text-slate-400 hover:text-white transition-all';
-      } else {
-        senderDiv.classList.add('hidden');
-        recipientDiv.classList.remove('hidden');
-        btnRecipient.className = 'px-3 py-1 text-xs font-semibold rounded-lg transition-all bg-gradient-shagun text-white shadow-md';
-        btnSender.className = 'px-3 py-1 text-xs font-semibold rounded-lg text-slate-400 hover:text-white transition-all';
-      }
+    if (data.success) {
+      alert(`Gift Order Created! Claim Link: ${data.claim_url}`);
+      console.log('Order Data:', data.order);
+    } else {
+      alert('Error: ' + data.error);
     }
-
-    function setAmount(val) {
-      selectedAmount = val;
-      document.getElementById('pay-amount-label').innerText = '₹' + val.toLocaleString('en-IN');
-    }
-
-    function processUPIPayment() {
-      document.getElementById('upi-modal').classList.remove('hidden');
-    }
-
-    function closeModal() {
-      document.getElementById('upi-modal').classList.add('hidden');
-      document.getElementById('generated-card-modal').classList.add('hidden');
-    }
-
-    function simulateSuccess() {
-      document.getElementById('upi-modal').classList.add('hidden');
-      document.getElementById('generated-card-modal').classList.remove('hidden');
-      confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
-    }
-
-    function claimStockGift() {
-      document.getElementById('recipient-claim-card').classList.add('hidden');
-      document.getElementById('recipient-dashboard').classList.remove('hidden');
-      confetti({ particleCount: 120, spread: 80, origin: { y: 0.5 } });
-    }
-  </script>
-</body>
-</html>
+  } catch (err) {
+    console.error('Network Error:', err);
+  }
+}
