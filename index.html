@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Shagun - Gift Stocks to Loved Ones</title>
+  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
   <style>
     * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
     body { background-color: #f4f7f6; margin: 0; padding: 20px; display: flex; justify-content: center; }
@@ -24,19 +25,19 @@
   <form id="giftForm">
     <div class="form-group">
       <label>Your Name (Sender)</label>
-      <input type="text" id="senderName" placeholder="e.g. Aman Sharma" required>
+      <input type="text" id="senderName" placeholder="e.g. Ankit Kumar" required>
     </div>
     <div class="form-group">
       <label>Your Phone Number</label>
-      <input type="tel" id="senderPhone" placeholder="+919876543210" required>
+      <input type="tel" id="senderPhone" placeholder="+918828291234" required>
     </div>
     <div class="form-group">
       <label>Recipient Name</label>
-      <input type="text" id="recipientName" placeholder="e.g. Priya Verma" required>
+      <input type="text" id="recipientName" placeholder="e.g. Payal" required>
     </div>
     <div class="form-group">
       <label>Recipient Phone Number</label>
-      <input type="tel" id="recipientPhone" placeholder="+919123456789" required>
+      <input type="tel" id="recipientPhone" placeholder="+916290029033" required>
     </div>
     <div class="form-group">
       <label>Select Stock</label>
@@ -64,7 +65,7 @@
       <label>Personal Message</label>
       <textarea id="message" rows="2" placeholder="Wishing you a prosperous future!"></textarea>
     </div>
-    <button type="submit" id="submitBtn">Send Stock Gift 🚀</button>
+    <button type="submit" id="submitBtn">Pay & Send Stock Gift 🚀</button>
   </form>
 
   <div id="statusMessage"></div>
@@ -82,7 +83,7 @@
     submitBtn.innerText = 'Creating Order...';
     submitBtn.disabled = true;
     statusDiv.style.color = '#374151';
-    statusDiv.innerText = 'Connecting to Shagun backend...';
+    statusDiv.innerText = 'Initiating gift order...';
 
     const giftDetails = {
       sender_name: document.getElementById('senderName').value,
@@ -96,27 +97,78 @@
     };
 
     try {
-      const response = await fetch(`${RENDER_API_URL}/api/v1/gifts/create`, {
+      // 1. Create gift record in Supabase
+      const giftRes = await fetch(`${RENDER_API_URL}/api/v1/gifts/create`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(giftDetails)
       });
+      const giftData = await giftRes.json();
+      if (!giftData.success) throw new Error(giftData.error || 'Failed to create gift order');
 
-      const data = await response.json();
+      const createdGift = giftData.order;
 
-      if (data.success) {
-        statusDiv.style.color = '#16a34a';
-        statusDiv.innerHTML = `✅ Stock Gift Created!<br><br><a href="${data.claim_url}" target="_blank">View Claim Link</a>`;
-      } else {
-        statusDiv.style.color = '#dc2626';
-        statusDiv.innerText = 'Error: ' + data.error;
-      }
+      // 2. Create Razorpay Order
+      statusDiv.innerText = 'Opening payment gateway...';
+      const payOrderRes = await fetch(`${RENDER_API_URL}/api/v1/payments/create-order`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          amount_inr: giftDetails.gift_amount_inr, 
+          gift_id: createdGift.id 
+        })
+      });
+      const payOrderData = await payOrderRes.json();
+      if (!payOrderData.success) throw new Error('Razorpay setup failed: ' + payOrderData.error);
+
+      // 3. Launch Razorpay Checkout Modal
+      const options = {
+        key: payOrderData.key_id,
+        amount: payOrderData.amount,
+        currency: payOrderData.currency,
+        name: 'Shagun Equity Gifting',
+        description: `${giftDetails.stock_symbol} Gift for ${giftDetails.recipient_name}`,
+        order_id: payOrderData.razorpay_order_id,
+        prefill: {
+          name: giftDetails.sender_name,
+          contact: giftDetails.sender_phone
+        },
+        theme: { color: '#2563eb' },
+        handler: async function (response) {
+          statusDiv.innerText = 'Verifying payment...';
+
+          const verifyRes = await fetch(`${RENDER_API_URL}/api/v1/payments/verify`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+              gift_id: createdGift.id
+            })
+          });
+
+          const verifyData = await verifyRes.json();
+
+          if (verifyData.success) {
+            statusDiv.style.color = '#16a34a';
+            statusDiv.innerHTML = `🎉 Payment Successful!<br><br><a href="${giftData.claim_url}" target="_blank">View Lifafa Claim Link</a>`;
+          } else {
+            statusDiv.style.color = '#dc2626';
+            statusDiv.innerText = 'Payment verification failed.';
+          }
+        }
+      };
+
+      const rzp = new Razorpay(options);
+      rzp.open();
+
     } catch (err) {
       statusDiv.style.color = '#dc2626';
-      statusDiv.innerText = 'Network error. Please try again.';
+      statusDiv.innerText = 'Error: ' + err.message;
       console.error(err);
     } finally {
-      submitBtn.innerText = 'Send Stock Gift 🚀';
+      submitBtn.innerText = 'Pay & Send Stock Gift 🚀';
       submitBtn.disabled = false;
     }
   });
